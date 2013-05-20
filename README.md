@@ -1,4 +1,4 @@
-# qjira-wsdl
+# jira-wsdl
 
 gem for internal use of qa team projects
 
@@ -6,7 +6,7 @@ gem for internal use of qa team projects
 
 Add this line to your application's Gemfile:
 
-    gem 'qjira-wsdl'
+    gem 'jira-wsdl'
 
 And then execute:
 
