@@ -70,7 +70,7 @@ class JiraWsdl
       @actual_version = version[:name] if actual_version_id.to_i == version[:sequence].to_i
     end
 
-    @all_versions = all_versions.sort
+    @all_versions = all_versions.sort_by{|x| x.split('.').map &:to_i }
     all_versions = []
     raise Exceptions::CouldNotGetNextVersion, 'Problem getting Next Version number' if @next_version.nil?
     raise Exceptions::CouldNotGetActualVersion, 'Problem getting Actual Version number' if @actual_version.nil?
