@@ -83,7 +83,6 @@ class JiraWsdl
       puts "Jira connection failed. Trying to connect again. (Num tries: #{tries})"
       retry
     else
-      puts false
       return false
     end
   end
