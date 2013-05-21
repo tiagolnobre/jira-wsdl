@@ -18,5 +18,30 @@ Or install it yourself as:
 
 ## Usage
 
-See the documentation
 
+
+    jira= JiraWsdl.new('jira.atlassian.com', 'tiago.l.nobre+test', '123qwe')
+
+  Get login token:
+  
+    jira.token
+
+  Get version of the project
+  
+    jira.get_version project_key
+ 
+  Actual version: 
+  
+    jira.actual_version
+
+  Next version: 
+  
+    jira.next_version
+
+  All version:
+  
+    jira.all_versions
+
+  Get tickects: 
+   
+    tickets = @jira.get_jira_tickets(status, project, version)
