@@ -44,4 +44,4 @@ Or install it yourself as:
 
   Get tickects: 
    
-    tickets = @jira.get_jira_tickets(status, project, version)
+    tickets = jira.get_jira_tickets(status, project, version)
