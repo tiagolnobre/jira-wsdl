@@ -60,7 +60,6 @@ class JiraWsdl
       response = @client.call(:logout, message: {:token => token})
     }
     puts response.to_hash[:logout_response][:logout_return]
-
   end
 
   #get teh actual version and the next version of a project
