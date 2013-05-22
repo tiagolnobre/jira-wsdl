@@ -15,11 +15,13 @@ class JiraWsdl
     #create Savon.client
     @client = Savon.client(wsdl: @wsdl_url, log: false)
 
-    #operation list permited by JIRA soap
-    #@operations_available = @client.operations.sort
-
     #create login token
     @token ||= self.get_token
+  end
+
+  def list_operations
+    #operation list permited by JIRA soap
+    @operations_available = @client.operations.sort
   end
 
   #get token login
@@ -48,6 +50,19 @@ class JiraWsdl
     puts error.to_hash[:fault][:faultstring]
   end
 
+  #logout of jira
+  #
+  # @param [String] token
+  # @return [Boolean]
+  def logout(token = @token)
+    response=nil
+    Timeout::timeout(60) {
+      response = @client.call(:logout, message: {:token => token})
+    }
+    puts response.to_hash[:logout_response][:logout_return]
+
+  end
+
   #get teh actual version and the next version of a project
   # @param [String] project_name
   def get_version(project_name)
@@ -70,20 +85,19 @@ class JiraWsdl
       @actual_version = version[:name] if actual_version_id.to_i == version[:sequence].to_i
     end
 
-    @all_versions = all_versions.sort_by{|x| x.split('.').map &:to_i }
-    all_versions = []
+    @all_versions = all_versions.sort_by { |x| x.split('.').map &:to_i }
     raise Exceptions::CouldNotGetNextVersion, 'Problem getting Next Version number' if @next_version.nil?
     raise Exceptions::CouldNotGetActualVersion, 'Problem getting Actual Version number' if @actual_version.nil?
     return true
   rescue Savon::SOAPFault => e
     tries = tries -= 1
-    unless (tries).zero?
+    if (tries).zero?
+      return false
+    else
       sleep 5
       self.token
       puts "Jira connection failed. Trying to connect again. (Num tries: #{tries})"
       retry
-    else
-      return false
     end
   end
 
@@ -106,13 +120,14 @@ class JiraWsdl
   # @param status - verify,in progress, open, reopened, closed
   # @param project key or name
   # @param version project version
-  # @param maxnumresults max number of results
+  # @param max_num_results max number of results
   # @return nil, jira_tickets, (false, error_msg)
-  def get_jira_tickets(status, project, version, maxnumresults=300)
+  def get_jira_tickets(status, project, version, max_num_results=300)
 
-    response = @client.call(:get_issues_from_jql_search, message: {:token => @token,
-                                                                   :jqlSearch => 'status in (' + status + ') and project=' + project + ' and fixVersion in (' + version + ')',
-                                                                   :maxNumResults => maxnumresults})
+    response = @client.call(:get_issues_from_jql_search,
+                            message: {:token => @token,
+                                      :jqlSearch => 'status in (' + status + ') and project=' + project + ' and fixVersion in (' + version + ')',
+                                      :maxNumResults => max_num_results})
     #if response is empty
     if response.to_hash[:multi_ref].nil?
       nil

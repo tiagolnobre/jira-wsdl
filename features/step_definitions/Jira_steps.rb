@@ -37,3 +37,10 @@ Then(/^I can get all versions for the "([^"]*)" project$/) do |project|
   assert(!@jira.all_versions.empty?, 'Can\'t get next version')
   puts "All version: #{@jira.all_versions}"
 end
+Then(/^I logout from Jira$/) do
+  @jira.logout
+end
+
+Then(/^I get a list of permitted operations$/) do
+  puts @jira.list_operations
+end
