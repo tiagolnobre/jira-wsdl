@@ -48,6 +48,18 @@ class JiraWsdl
     puts error.to_hash[:fault][:faultstring]
   end
 
+  #logout to jira
+  #
+  # @param [String] token
+  # @return [Boolean]
+  def logout token = @token
+    response=nil
+    Timeout::timeout(60) {
+      response = @client.call(:logout, message: {:token => token})
+    }
+    response.to_hash[:logout_response][:logout_return]
+  end
+
   #get teh actual version and the next version of a project
   # @param [String] project_name
   def get_version(project_name)
