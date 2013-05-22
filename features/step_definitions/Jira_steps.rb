@@ -1,4 +1,6 @@
+include Test::Unit::Assertions
 require File.dirname(__FILE__) + '/../../lib/jira-wsdl'
+
 
 Given /^I create instantiation of Jira$/ do
   puts 'Creating Jira Object'
