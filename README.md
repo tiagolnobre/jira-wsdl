@@ -42,6 +42,6 @@ Or install it yourself as:
   
     jira.all_versions
 
-  Get tickects: 
+  Get tickets:
    
     tickets = jira.get_jira_tickets(status, project, version)
