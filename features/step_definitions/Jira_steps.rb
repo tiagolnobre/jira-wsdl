@@ -4,7 +4,7 @@ require File.dirname(__FILE__) + '/../../lib/jira-wsdl'
 
 Given /^I create instantiation of Jira$/ do
   puts 'Creating Jira Object'
-  @jira= JiraWsdl.new('jira.mendeley.com', 'tiago.nobre', 'superbock')
+  @jira= JiraWsdl.new('jira.atlassian.com', 'tiago.l.nobre+test', '123qwe')
 end
 
 Then /^I have a login token to access all the functions$/ do
@@ -39,7 +39,13 @@ Then(/^I can get all versions for the "([^"]*)" project$/) do |project|
   assert(!@jira.all_versions.empty?, 'Can\'t get next version')
   puts "All version: #{@jira.all_versions}"
 end
+Then(/^I logout from Jira$/) do
+  @jira.logout
+end
 
+Then(/^I get a list of permitted operations$/) do
+  puts @jira.list_operations
+end
 Then(/^I check that the project "([^"]*)" existence is "([^"]*)"$/) do |project, boolean|
   result, error = @jira.check_project project
   assert_equal(result.to_s, boolean, error)
