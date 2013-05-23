@@ -74,7 +74,7 @@ class JiraWsdl
     return false, error
   end
 
-  #get teh actual version and the next version of a project
+  #get the actual version and the next version of a project
   # @param [String] project_name
   def get_version(project_name)
     tries ||= 5
@@ -85,23 +85,13 @@ class JiraWsdl
       #get all versions xml
       response = @client.call(:get_versions, message: {:token => @token, :key => project_name.upcase})
 
-    #get next version from hash
-    next_version_id = response.to_hash[:get_versions_response][:get_versions_return][:'@soapenc:array_type']
-    next_version_id = next_version_id.match(/RemoteVersion\[(\d+)\]/)[1]
+      #get next version from hash
+      next_version_id = response.to_hash[:get_versions_response][:get_versions_return][:'@soapenc:array_type']
+      next_version_id = next_version_id.match(/RemoteVersion\[(\d+)\]/)[1]
 
-    #get actual version from the array of version id's
-    actual_version_id = (self.get_all_version_ids response.to_hash).sort.last - 1
+      #get actual version from the array of version id's
+      actual_version_id = (self.get_all_version_ids response.to_hash).sort.last - 1
 
-    response.to_hash[:multi_ref].each do |version|
-      all_versions << version[:name]
-      @next_version = version[:name] if next_version_id.to_i == version[:sequence].to_i
-      @actual_version = version[:name] if actual_version_id.to_i == version[:sequence].to_i
-    end
-
-    @all_versions = all_versions.sort_by { |x| x.split('.').map &:to_i }
-    raise Exceptions::CouldNotGetNextVersion, 'Problem getting Next Version number' if @next_version.nil?
-    raise Exceptions::CouldNotGetActualVersion, 'Problem getting Actual Version number' if @actual_version.nil?
-    return true
       response.to_hash[:multi_ref].each do |version|
         all_versions << version[:name]
         @next_version = version[:name] if next_version_id.to_i == version[:sequence].to_i
@@ -109,7 +99,6 @@ class JiraWsdl
       end
 
       @all_versions = all_versions.sort_by { |x| x.split('.').map &:to_i }
-      all_versions = []
       raise Exceptions::CouldNotGetNextVersion, 'Problem getting Next Version number' if @next_version.nil?
       raise Exceptions::CouldNotGetActualVersion, 'Problem getting Actual Version number' if @actual_version.nil?
       return true
@@ -129,7 +118,7 @@ class JiraWsdl
 
 #get all version id's of the project
 #
-# @param [Has] response
+# @param [Hash] response
 # @return [Array] @version_id_array
   def get_all_version_ids(response)
     version_id_array = []

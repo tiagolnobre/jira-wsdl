@@ -26,11 +26,6 @@ Feature: Test_JiraWsdl
     Then I get a list of permitted operations
     Then I logout from Jira
 
-  Scenario: List_Jira_Operations
-    Given I create instantiation of Jira
-    Then I get a list of permitted operations
-    Then I logout from Jira
-
   Scenario Outline: Test_Jira_if_a_project_exist
     Given I create instantiation of Jira
     Then I check that the project "<project>" existence is "<result>"

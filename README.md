@@ -46,6 +46,7 @@ Or install it yourself as:
    
     tickets = jira.get_jira_tickets(status, project, version)
     
-  Close session
+  Close session:
+
     jira.logout token 
     
