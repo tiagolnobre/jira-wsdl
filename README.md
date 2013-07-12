@@ -1,6 +1,6 @@
 # jira-wsdl
 
-gem for internal use of qa team projects
+ ruby interaction with JIRA
 
 ## Installation
 
@@ -50,3 +50,10 @@ Or install it yourself as:
 
     jira.logout token 
     
+
+
+___________________________________________________________________________________________
+
+New features?  Tell us what you need that we will see what we can do. :)
+
+
