@@ -15,13 +15,23 @@ class JiraWsdl
     #create Savon.client
     @client = Savon.client(wsdl: @wsdl_url, log: false)
 
+    #operation list permited by JIRA soap
+    #@operations_available = @client.operations.sort
+
     #create login token
     @token ||= self.get_token
   end
 
-  def list_operations
-    #operation list permited by JIRA soap
-    @operations_available = @client.operations.sort
+
+  class Response
+    attr_reader :success, :tickets, :optional
+
+    def initialize(success, tickets, error_msg, optional=nil)
+      @success = success
+      @tickets = tickets
+      @error_msg = error_msg
+      @optional = optional
+    end
   end
 
   #get token login
@@ -29,7 +39,7 @@ class JiraWsdl
   # @return [String] token
   def get_token
     response = self.login @username, @password
-    response.to_hash[:login_response][:login_return] if response.nil? ==false and response.success?
+    response.to_hash[:login_response][:login_return] if response
   rescue Savon::SOAPFault => error
     LOG.error error.to_hash[:fault][:faultstring]
     return false
@@ -45,9 +55,10 @@ class JiraWsdl
     Timeout::timeout(60) {
       response = @client.call(:login, message: {:username => username, :password => password})
     }
-    response if response.success?
+    response if response.success? if response
   rescue Savon::SOAPFault => error
-    puts error.to_hash[:fault][:faultstring]
+    LOG.error error.to_hash[:fault][:faultstring]
+    return false
   end
 
   #logout of jira
@@ -62,64 +73,68 @@ class JiraWsdl
     response.to_hash[:logout_response][:logout_return]
   end
 
-  #checks if a project exist
-  #
-  # @param [String] project
-  # @return [Boolean]
-  def check_project project
-    @client.call(:get_project_by_key, message: {:token => @token, :key => project.upcase})
-    true
-  rescue Savon::SOAPFault => error
-    error = error.to_hash[:fault][:faultstring]
-    return false, error
-  end
 
   #get the actual version and the next version of a project
   # @param [String] project_name
   def get_version(project_name)
     tries ||= 5
     all_versions = []
-    result, error = (self.check_project project_name)
+    version_name =[]
+    hash_versions = {}
 
-    unless result == false
-      #get all versions xml
-      response = @client.call(:get_versions, message: {:token => @token, :key => project_name.upcase})
+    #get all versions xml
+    response = @client.call(:get_versions, message: {:token => @token, :key => project_name.upcase})
+    response.to_hash[:multi_ref].each do |version|
 
-      #get next version from hash
-      next_version_id = response.to_hash[:get_versions_response][:get_versions_return][:'@soapenc:array_type']
-      next_version_id = next_version_id.match(/RemoteVersion\[(\d+)\]/)[1]
-
-      #get actual version from the array of version id's
-      actual_version_id = (self.get_all_version_ids response.to_hash).sort.last - 1
-
-      response.to_hash[:multi_ref].each do |version|
-        all_versions << version[:name]
-        @next_version = version[:name] if next_version_id.to_i == version[:sequence].to_i
-        @actual_version = version[:name] if actual_version_id.to_i == version[:sequence].to_i
+      begin
+        #get version with release date greater than todays date
+        version_name << version[:name] if Time.now.strftime("%F") <= Time.parse(version[:release_date]).strftime("%F")
+        #case the below option is without any date will get all version with release data 
+        # and the start will be the nearest one to the today date
+        hash_versions.store(version[:name], version[:release_date])
+      rescue NoMethodError, TypeError
+        LOG.debug 'There were versions without release version.'
       end
-
-      @all_versions = all_versions.sort_by { |x| x.split('.').map &:to_i }
-      raise Exceptions::CouldNotGetNextVersion, 'Problem getting Next Version number' if @next_version.nil?
-      raise Exceptions::CouldNotGetActualVersion, 'Problem getting Actual Version number' if @actual_version.nil?
-      return true
+      all_versions << version[:name]
     end
-    return false, error.to_s
-  rescue Savon::SOAPFault => e
-    tries = tries -= 1
-    if (tries).zero?
-      return false
+
+    @all_versions = all_versions.sort_by { |a| a.split('.').map &:to_i }
+    @actual_version = version_name.empty? ? @all_versions[@all_versions.index(hash_versions.sort_by { |k, v| v }.last[0]) + 1] : version_name.sort_by { |a| a.split('.').map &:to_i }.first
+
+    # in case there is no next_version put the last two version of the array of versions
+    if @actual_version.nil?
+      @next_version = @all_versions[-1]
+      @actual_version = @all_versions[-2]
     else
+      @next_version = @all_versions[@all_versions.index(@actual_version) + 1]
+      # if there is no next version put the last two versions
+      if @next_version.nil?
+        @next_version = @all_versions[-1]
+        @actual_version = @all_versions[-2]
+      end
+    end
+
+    #all_versions = []
+    raise Exceptions::CouldNotGetNextVersion, 'Problem getting Next Version number' if @next_version.nil?
+    raise Exceptions::CouldNotGetActualVersion, 'Problem getting Actual Version number' if @actual_version.nil?
+    return true
+  rescue Savon::SOAPFault => error
+    tries = tries -= 1
+    unless (tries).zero?
       sleep 5
-      self.token
-      puts "Jira connection failed. Trying to connect again. (Num tries: #{tries})"
+      logout
+      @token = self.get_token
+      LOG.error "Jira connection failed. Trying to connect again. (Num tries: #{tries})"
       retry
+    else
+      return false
     end
   end
 
-#get all version id's of the project
-#
-# @param [Hash] response
-# @return [Array] @version_id_array
+  #get all version id's of the project
+  #
+  # @param [Has] response
+  # @return [Array] @version_id_array
   def get_all_version_ids(response)
     version_id_array = []
     response.to_hash[:multi_ref].each do |version|
@@ -127,22 +142,77 @@ class JiraWsdl
     end
     return version_id_array
   rescue Savon::SOAPFault => error
-    puts error.to_hash[:fault][:faultstring]
+    LOG.error error.to_hash[:fault][:faultstring]
+    return false
   end
 
+  #Should be used the query_by_hash or jqlquery function instead of this one
+  #
   #get jira tickets from a project
   #
   # @param status - verify,in progress, open, reopened, closed
   # @param project key or name
   # @param version project version
-  # @param max_num_results max number of results
+  # @param maxnumresults max number of results
   # @return nil, jira_tickets, (false, error_msg)
-  def get_jira_tickets(status, project, version, max_num_results=300)
+  def get_jira_tickets(status, project, version, maxnumresults=300)
+    LOG.warn 'Should be used the query_by_hash or jqlquery function instead of this one'
+    response = @client.call(:get_issues_from_jql_search, message: {:token => @token,
+                                                                   :jqlSearch => 'status in (' + status + ') and project=' + project + ' and fixVersion in (' + version + ')',
+                                                                   :maxNumResults => maxnumresults})
+    #if response is empty
+    if response.to_hash.has_key? :multi_ref
+      jira_tickets = []
+      response.to_hash[:multi_ref].each do |tickets|
+        jira_tickets << [tickets[:key], tickets[:summary], 'http://'+@jira_host+'/browse/'+tickets[:key].to_s] if !tickets[:key].nil? and !tickets[:summary].nil?
+      end
+    end
+    return JiraWsdl::Response.new(true, jira_tickets, nil)
+  rescue Savon::SOAPFault => error
+    return JiraWsdl::Response.new(false, nil, error.to_hash[:fault][:faultstring].match(/.*?:(.*)/)[1])
+  rescue StandardError => error
+    LOG.error error
+    return JiraWsdl::Response.new(false, nil, error)
+  end
 
-    response = @client.call(:get_issues_from_jql_search,
-                            message: {:token => @token,
-                                      :jqlSearch => 'status in (' + status + ') and project=' + project + ' and fixVersion in (' + version + ')',
-                                      :maxNumResults => max_num_results})
+
+  #get jira tickets by hash
+  #
+  # @param hash - verify,in progress, open, reopened, closed
+  # @param maxnumresults max number of results
+  # @return nil, jira_tickets, (false, error_msg)
+  def query_by_hash(hash, maxnumresults=300)
+    begin
+      jql_string = hash.map { |k, v| "#{k} in (#{v})" }.join(' AND ')
+      LOG.info "Query: #{jql_string}"
+      response = @client.call(:get_issues_from_jql_search, message: {:token => @token,
+                                                                     :jqlSearch => "#{jql_string}",
+                                                                     :maxNumResults => maxnumresults})
+      jira_tickets = []
+      if response.to_hash.has_key? :multi_ref
+        response.to_hash[:multi_ref].each do |tickets|
+          if !tickets[:key].nil? and !tickets[:summary].nil?
+            jira_tickets << [tickets[:key], tickets[:summary], 'http://'+@jira_host+'/browse/'+tickets[:key].to_s]
+          end
+        end
+      end
+      return JiraWsdl::Response.new(true, jira_tickets, nil)
+    rescue Savon::SOAPFault => error
+      return JiraWsdl::Response.new(false, nil, error.to_hash[:fault][:faultstring].match(/.*?:(.*)/)[1])
+    end
+  end
+
+  #get jira tickets from a project
+  #
+  # @param jql_string - jql string
+  # @param maxnumresults max number of results
+  # @return nil, jira_tickets, (false, error_msg)
+  def jqlquery(jql_string, maxnumresults=300)
+
+    LOG.info "Query: #{jql_string}"
+    response = @client.call(:get_issues_from_jql_search, message: {:token => @token,
+                                                                   :jqlSearch => "#{jql_string}",
+                                                                   :maxNumResults => maxnumresults})
     #if response is empty
     if response.to_hash[:multi_ref].nil?
       nil
@@ -153,10 +223,15 @@ class JiraWsdl
           jira_tickets << [tickets[:key], tickets[:summary], 'http://'+@jira_host+'/browse/'+tickets[:key].to_s]
         end
       end
-      jira_tickets
+      #return true, jira_tickets
+      return JiraWsdl::Response.new(true, jira_tickets, nil)
     end
   rescue Savon::SOAPFault => error
-    return false, error.to_hash[:fault][:faultstring].match(/.*?:(.*)/)[1]
+    #return false, error.to_hash[:fault][:faultstring].match(/.*?:(.*)/)[1]
+    return JiraWsdl::Response.new(false, nil, error.to_hash[:fault][:faultstring].match(/.*?:(.*)/)[1])
+  rescue StandardError => error
+    LOG.error error
+    return JiraWsdl::Response.new(false, nil, error)
   end
 
 end
@@ -166,7 +241,5 @@ module Exceptions
   class CouldNotGetNextVersion < StandardError;
   end
   class CouldNotGetActualVersion < StandardError;
-  end
-  class TokenNotCreated < StandardError;
   end
 end
