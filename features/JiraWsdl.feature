@@ -37,3 +37,12 @@ Feature: Test_JiraWsdl
   Scenario: Test_Jira_get_version_from_a_non_existing_project
     Given I create instantiation of Jira
     Then I can get the versions of the project with the key "DEMO123"
+
+
+  Scenario: Test_Query_Jira_by_Hash
+    Given I create instantiation of Jira
+    Then I query by hash {:project => 'DEMO', :status => '"in progress", Open'}
+
+  Scenario: Test_direct_jql_query
+    Given I create instantiation of Jira
+    Then I jql query jira project in (DEMO) AND status in ("in progress", Open)
