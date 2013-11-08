@@ -46,7 +46,22 @@ end
 Then(/^I get a list of permitted operations$/) do
   puts @jira.list_operations
 end
+
 Then(/^I check that the project "([^"]*)" existence is "([^"]*)"$/) do |project, boolean|
   result, error = @jira.check_project project
   assert_equal(result.to_s, boolean, error)
+end
+
+Then(/^I query by hash (.*)$/) do |query|
+  jqlquery_result = @jira.query_by_hash(eval(query))
+  assert_equal(true, jqlquery_result.success, jqlquery_result.tickets )
+  LOG.info jqlquery_result.tickets
+  assert(!jqlquery_result.tickets.empty?, 'Tickets are empty')
+end
+
+Then(/^I jql query jira (.*)$/) do |string|
+  jqlquery_result = @jira.jqlquery(string)
+  assert_equal(true, jqlquery_result.success, jqlquery_result.tickets )
+  LOG.info jqlquery_result.tickets
+  assert(!jqlquery_result.tickets.empty?, 'Tickets are empty')
 end
