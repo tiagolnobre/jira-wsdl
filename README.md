@@ -45,7 +45,17 @@ Or install it yourself as:
   Get tickets:
    
     tickets = jira.get_jira_tickets(status, project, version)
-    
+   
+   or (jql query as a string)
+   
+     tickets = jira.jqlquery(string)
+   
+   or (jql query as a hash parameters)
+   
+     tickets = jira.query_by_hash(query)
+  
+  
+  
   Close session:
 
     jira.logout token 
