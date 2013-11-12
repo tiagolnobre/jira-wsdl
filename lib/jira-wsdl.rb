@@ -41,7 +41,7 @@ class JiraWsdl
     response = self.login @username, @password
     response.to_hash[:login_response][:login_return] if response
   rescue Savon::SOAPFault => error
-    LOG.error error.to_hash[:fault][:faultstring]
+    puts error.to_hash[:fault][:faultstring]
     return false
   end
 
@@ -57,7 +57,7 @@ class JiraWsdl
     }
     response if response.success? if response
   rescue Savon::SOAPFault => error
-    LOG.error error.to_hash[:fault][:faultstring]
+    puts error.to_hash[:fault][:faultstring]
     return false
   end
 
@@ -93,7 +93,7 @@ class JiraWsdl
         # and the start will be the nearest one to the today date
         hash_versions.store(version[:name], version[:release_date])
       rescue NoMethodError, TypeError
-        LOG.debug 'There were versions without release version.'
+        puts 'There were versions without release version.'
       end
       all_versions << version[:name]
     end
@@ -124,7 +124,7 @@ class JiraWsdl
       sleep 5
       logout
       @token = self.get_token
-      LOG.error "Jira connection failed. Trying to connect again. (Num tries: #{tries})"
+      puts "Jira connection failed. Trying to connect again. (Num tries: #{tries})"
       retry
     else
       return false
@@ -142,7 +142,7 @@ class JiraWsdl
     end
     return version_id_array
   rescue Savon::SOAPFault => error
-    LOG.error error.to_hash[:fault][:faultstring]
+    puts error.to_hash[:fault][:faultstring]
     return false
   end
 
@@ -156,7 +156,7 @@ class JiraWsdl
   # @param maxnumresults max number of results
   # @return nil, jira_tickets, (false, error_msg)
   def get_jira_tickets(status, project, version, maxnumresults=300)
-    LOG.warn 'Should be used the query_by_hash or jqlquery function instead of this one'
+    puts 'Should be used the query_by_hash or jqlquery function instead of this one'
     response = @client.call(:get_issues_from_jql_search, message: {:token => @token,
                                                                    :jqlSearch => 'status in (' + status + ') and project=' + project + ' and fixVersion in (' + version + ')',
                                                                    :maxNumResults => maxnumresults})
@@ -171,7 +171,7 @@ class JiraWsdl
   rescue Savon::SOAPFault => error
     return JiraWsdl::Response.new(false, nil, error.to_hash[:fault][:faultstring].match(/.*?:(.*)/)[1])
   rescue StandardError => error
-    LOG.error error
+    puts error
     return JiraWsdl::Response.new(false, nil, error)
   end
 
@@ -184,7 +184,7 @@ class JiraWsdl
   def query_by_hash(hash, maxnumresults=300)
     begin
       jql_string = hash.map { |k, v| "#{k} in (#{v})" }.join(' AND ')
-      LOG.info "Query: #{jql_string}"
+      puts "Query: #{jql_string}"
       response = @client.call(:get_issues_from_jql_search, message: {:token => @token,
                                                                      :jqlSearch => "#{jql_string}",
                                                                      :maxNumResults => maxnumresults})
@@ -209,7 +209,7 @@ class JiraWsdl
   # @return nil, jira_tickets, (false, error_msg)
   def jqlquery(jql_string, maxnumresults=300)
 
-    LOG.info "Query: #{jql_string}"
+    puts "Query: #{jql_string}"
     response = @client.call(:get_issues_from_jql_search, message: {:token => @token,
                                                                    :jqlSearch => "#{jql_string}",
                                                                    :maxNumResults => maxnumresults})
@@ -230,7 +230,7 @@ class JiraWsdl
     #return false, error.to_hash[:fault][:faultstring].match(/.*?:(.*)/)[1]
     return JiraWsdl::Response.new(false, nil, error.to_hash[:fault][:faultstring].match(/.*?:(.*)/)[1])
   rescue StandardError => error
-    LOG.error error
+    puts error
     return JiraWsdl::Response.new(false, nil, error)
   end
 
