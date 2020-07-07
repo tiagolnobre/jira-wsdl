@@ -9,5 +9,5 @@ Gem::Specification.new do |s|
   s.email       = 'tiago.l.nobre@gmail.com'
   s.files       = Dir.glob("{lib}/**/*") + %w(README.md Rakefile)
   s.has_rdoc    = false
-  s.add_dependency('savon', '~> 2.1.0')
+  s.add_dependency('savon', '~> 2.12.1')
 end
