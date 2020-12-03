@@ -1,4 +1,6 @@
 # jira-wsdl
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Ftiagolnobre%2Fjira-wsdl.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Ftiagolnobre%2Fjira-wsdl?ref=badge_shield)
+
 
  ruby interaction with JIRA
 
@@ -67,3 +69,7 @@ ________________________________________________________________________________
 New features?  Tell us what you need that we will see what we can do. :)
 
 
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Ftiagolnobre%2Fjira-wsdl.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Ftiagolnobre%2Fjira-wsdl?ref=badge_large)
